@@ -29,6 +29,7 @@ if __name__ == '__main__':
     rospy.init_node('capture_node')
 
     models = [
+       'dropbox',
        'arm_part',
        'beer',
        'biscuits',
@@ -52,11 +53,11 @@ if __name__ == '__main__':
 
     for model_name in models:
         spawn_model(model_name)
-
+        # Capture 20 random poses
         for i in range(20):
-            # make five attempts to get a valid point cloud then give up
             sample_was_good = False
             try_count = 0
+            # make five attempts to get a valid point cloud then give up
             while not sample_was_good and try_count < 5:
                 sample_cloud = capture_sample()
                 sample_cloud_arr = ros_to_pcl(sample_cloud).to_array()
