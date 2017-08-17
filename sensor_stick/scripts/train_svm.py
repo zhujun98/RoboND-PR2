@@ -17,7 +17,7 @@ def plot_confusion_matrix(cm, classes, normalize=False,
     Normalization can be applied by setting `normalize=True`.
     """
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
+    plt.title(title, fontsize=16)
     cbar = plt.colorbar()
     cbar.ax.tick_params(labelsize=16)
     tick_marks = np.arange(len(classes))
