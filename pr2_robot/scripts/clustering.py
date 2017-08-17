@@ -13,15 +13,9 @@ from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.msg import DetectedObject
 from sensor_stick.pcl_helper import *
 
-import rospy
-import tf
-from geometry_msgs.msg import Pose
-from std_msgs.msg import Float64
-from std_msgs.msg import Int32
-from std_msgs.msg import String
 from pr2_robot.srv import *
-from rospy_message_converter import message_converter
-import yaml
+
+import rospy
 
 
 def get_normals(cloud):
@@ -31,26 +25,7 @@ def get_normals(cloud):
     return get_normals_prox(cloud).cluster
 
 
-def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
-    """Helper function to create a yaml friendly dictionary from ROS messages"""
-    yaml_dict = {}
-    yaml_dict["test_scene_num"] = test_scene_num.data
-    yaml_dict["arm_name"]  = arm_name.data
-    yaml_dict["object_name"] = object_name.data
-    yaml_dict["pick_pose"] = message_converter.convert_ros_message_to_dictionary(pick_pose)
-    yaml_dict["place_pose"] = message_converter.convert_ros_message_to_dictionary(place_pose)
-
-    return yaml_dict
-
-
-def send_to_yaml(yaml_filename, dict_list):
-    """Helper function to output to yaml file"""
-    data_dict = {"object_list": dict_list}
-    with open(yaml_filename, 'w') as outfile:
-        yaml.dump(data_dict, outfile, default_flow_style=False)
-
-
-def pcl_callback(pcl_msg):
+def callback(pcl_msg):
     """Callback function for your Point Cloud Subscriber"""
     # Convert ROS msg to PCL data
     pcl_data = ros_to_pcl(pcl_msg)
@@ -142,8 +117,7 @@ def pcl_callback(pcl_msg):
         ros_cluster_cloud = pcl_to_ros(pcl_cluster)    
 
         # Extract histogram features
-        color_hists = compute_color_histograms(ros_cluster_cloud, 
-                                               using_hsv=True)
+        color_hists = compute_color_histograms(ros_cluster_cloud, using_hsv=True)
         normal_hists = compute_normal_histograms(get_normals(ros_cluster_cloud))
 
         feature = np.concatenate((color_hists, normal_hists))
@@ -165,118 +139,24 @@ def pcl_callback(pcl_msg):
         do.cloud = ros_cluster_cloud
         detected_objects.append(do)
         
-
-    rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
-
-    # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
-    # Could add some logic to determine whether or not your object detections are robust
-    # before calling pr2_mover()
-    try:
-        pr2_mover(detected_objects)
-    except rospy.ROSInterruptException:
-        pass
-
-
-def pr2_mover(object_list):
-    """function to load parameters and request PickPlace service"""
-    # TODO: Initialize variables
-
-    # TODO: Rotate PR2 in place to capture side tables for the collision map
-
-    # Read parameters
-
-    # The format of 'object_list' is:
-    # [{'group': 'red', 'name': 'sticky_notes'},
-    #  {'group': 'red', 'name': 'book'},
-    #  {'group': 'green', 'name': 'snacks'}]
-    object_params_list = rospy.get_param('/object_list')
-    # The format of 'dropbox' is:
-    # [{'group': 'red', 'name': 'left', 'position': [0, 0.71, 0.605]},
-    #  {'group': 'green', 'name': 'right', 'position': [0, -0.71, 0.605]}]
-    dropbox_params = rospy.get_param('/dropbox')
-
-    # Make a new data structure for future look-up
-    object_information = dict()
-    for object_params in object_params_list:
-        if object_params['group'] == 'red':
-            object_information[object_params['name']] = \
-                (dropbox_params[0]['name'], dropbox_params[0]['position']) 
-        elif object_params['group'] == 'green':
-            object_information[object_params['name']] = \
-                (dropbox_params[1]['name'], dropbox_params[1]['position']) 
-        else:
-            print("{}: Unknown group!".format(object_params['group']))
-
-    yaml_dict_list = []
-    for obj in object_list:
-        # Create a list of dictionaries for later output to yaml format
-        test_scene_num = Int32()
-        test_scene_num.data = 1
-
-        object_name = String()
-        object_name.data = str(obj.label)
-
-        centroid = np.mean(ros_to_pcl(obj.cloud).to_array(), axis=0)[:3]
-        pick_pose = Pose()
-        pick_pose.position.x = np.asscalar(centroid[0])
-        pick_pose.position.y = np.asscalar(centroid[1])
-        pick_pose.position.z = np.asscalar(centroid[2])
-        pick_pose.orientation.x = 0
-        pick_pose.orientation.y = 0
-        pick_pose.orientation.z = 0
-        pick_pose.orientation.w = 0
-        
-        arm_name = String()
-        arm_name.data = str(object_information[obj.label][0])
-
-        place_pose = Pose()
-        place_pose.position.x = object_information[obj.label][1][0]
-        place_pose.position.y = object_information[obj.label][1][1]
-        place_pose.position.z = object_information[obj.label][1][2]
-        place_pose.orientation.x = 0
-        place_pose.orientation.y = 0
-        place_pose.orientation.z = 0
-        place_pose.orientation.w = 0
-
-        yaml_dict_list.append(make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose))
-
-        # Wait for 'pick_place_routine' service to come up
-        # rospy.wait_for_service('pick_place_routine')
-
-        # try:
-          #   pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-
-            # TODO: Insert your message variables to be sent as a service request
-            # resp = pick_place_routine(TEST_SCENE_NUM, OBJECT_NAME, WHICH_ARM, PICK_POSE, PLACE_POSE)
-
-            # print ("Response: ",resp.success)
-
-        # except rospy.ServiceException, e:
-            # print "Service call failed: %s"%e
-
-    send_to_yaml('../config/output_1.yaml', yaml_dict_list)
+    detected_objects_pub.publish(detected_objects)
+    rospy.loginfo('Detected {} objects: {}'.
+                  format(len(detected_objects_labels), detected_objects_labels))
 
 
 if __name__ == '__main__':
 
-    # ROS node initialization
     rospy.init_node('clustering', anonymous=True)
 
-    # Create Subscribers
-    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2,
-                               pcl_callback, queue_size=1)
+    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, callback)
 
-    # Create Publishers
     pcl_objects_pub = rospy.Publisher("/pcl_objects", PointCloud2, queue_size=1)
     pcl_table_pub = rospy.Publisher("/pcl_table", PointCloud2, queue_size=1)
     pcl_cluster_pub = rospy.Publisher("/pcl_cluster", PointCloud2, queue_size=1)
+    object_markers_pub = rospy.Publisher("/object_markers", Marker, queue_size=1)
+    detected_objects_pub = rospy.Publisher("/detected_objects", DetectedObjectsArray, queue_size=1)
 
-    object_markers_pub = rospy.Publisher("/object_markers", Marker,
-                                         queue_size=1)
-    detected_objects_pub = rospy.Publisher("/deleted_objects",
-                                           DetectedObjectsArray, queue_size=1)
-
-    # Load Model From disk
+    # Load the model stored under the directory "sensor_stick" 
     model = pickle.load(open('../../sensor_stick/scripts/model.pkl', 'rb'))
     clf = model['classifier']
     encoder = LabelEncoder()
@@ -286,7 +166,5 @@ if __name__ == '__main__':
     # Initialize color_list
     get_color_list.color_list = []
 
-    # Spin while node is not shutdown
     while not rospy.is_shutdown():
         rospy.spin()
-
