@@ -18,9 +18,10 @@ def plot_confusion_matrix(cm, classes, normalize=False,
     """
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
-    plt.colorbar()
+    cbar = plt.colorbar()
+    cbar.ax.tick_params(labelsize=16)
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=90)
     plt.yticks(tick_marks, classes)
 
     if normalize:
@@ -28,12 +29,13 @@ def plot_confusion_matrix(cm, classes, normalize=False,
 
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, '{0:.2f}'.format(cm[i, j]), horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
+        plt.text(j, i, '{0:.1f}'.format(cm[i, j]), horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black", fontsize=16)
 
     plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+    plt.tick_params(labelsize=18)
+    plt.ylabel('True label', fontsize=20)
+    plt.xlabel('Predicted label', fontsize=20)
 
 
 training_set = pickle.load(open('training_set.pkl', 'rb'))
