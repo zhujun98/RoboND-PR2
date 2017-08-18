@@ -80,7 +80,7 @@ roslaunch pr2_robot pick_place_project.launch
 
 <root>/pr2_robot/scripts/clustering.py
 ```
-Filtering, RANSAC plane fitting and cluster segmentation are implemented in the `callback()` function. There is noise in the processed cloud since the StatisticalOutlierRemover filter is broken in pcl-python.
+Filtering, RANSAC plane fitting, cluster segmentation and object recognition are all implemented in the `callback()` function. There is noise in the processed cloud since the StatisticalOutlierRemover filter is broken in pcl-python.
 
 <img src="misc/pick_list_1.png" width="250"/> <img src="misc/pick_list_2.png" width="250"/> <img src="misc/pick_list_3.png" width="250"/>
 
