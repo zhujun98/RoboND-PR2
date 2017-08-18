@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys
+import random
 
 import numpy as np
 
@@ -15,6 +16,55 @@ from rospy_message_converter import message_converter
 from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.pcl_helper import ros_to_pcl 
 import yaml
+
+
+def get_request(label, target_objects, detected_objects, test_scene_num):
+    """Get pick&place request for a single object
+   
+    :param label: string
+        Name of the object. 
+    :param target_objects: dictionary
+        key: name (label)
+        value: (side of the dropbox [left/right], coordinates of the dropbox)
+    :param detected_objects: dictionary
+        key: name of the object
+        value: centroid coordinates (x, y, z) of the object
+    :param test_scene_num: int
+        Test scene number.
+    
+    :return: a tuple of msg objects
+        scene_num, object_name, arm_name, pick_pose, place_pose
+    """
+    centroid =  detected_objects[label]
+
+    scene_num = Int32()
+    scene_num.data = test_scene_num 
+
+    object_name = String()
+    object_name.data = str(label)
+
+    pick_pose = Pose()
+    pick_pose.position.x = np.asscalar(centroid[0])
+    pick_pose.position.y = np.asscalar(centroid[1])
+    pick_pose.position.z = np.asscalar(centroid[2])
+    pick_pose.orientation.x = 0
+    pick_pose.orientation.y = 0
+    pick_pose.orientation.z = 0
+    pick_pose.orientation.w = 0
+    
+    arm_name = String()
+    arm_name.data = str(target_objects[label][0])
+
+    place_pose = Pose()
+    place_pose.position.x = target_objects[label][1][0]
+    place_pose.position.y = target_objects[label][1][1]
+    place_pose.position.z = target_objects[label][1][2]
+    place_pose.orientation.x = 0
+    place_pose.orientation.y = 0
+    place_pose.orientation.z = 0
+    place_pose.orientation.w = 0
+
+    return scene_num, object_name, arm_name, pick_pose, place_pose
 
 
 def send_to_yaml(target_objects, detected_objects, test_scene_num): 
@@ -32,41 +82,15 @@ def send_to_yaml(target_objects, detected_objects, test_scene_num):
     yaml_dict_list = []
     for label in target_objects.keys():
         try:
-            centroid =  detected_objects[label]
+            scene_num, object_name, arm_name, pick_pose, place_pose = \
+                get_request(label, target_objects, detected_objects, test_scene_num)
         except KeyError:
             continue
 
-        scene_num = Int32()
-        scene_num.data = test_scene_num 
-
-        object_name = String()
-        object_name.data = str(label)
-
-        pick_pose = Pose()
-        pick_pose.position.x = np.asscalar(centroid[0])
-        pick_pose.position.y = np.asscalar(centroid[1])
-        pick_pose.position.z = np.asscalar(centroid[2])
-        pick_pose.orientation.x = 0
-        pick_pose.orientation.y = 0
-        pick_pose.orientation.z = 0
-        pick_pose.orientation.w = 0
-        
-        arm_name = String()
-        arm_name.data = str(target_objects[label][0])
-
-        place_pose = Pose()
-        place_pose.position.x = target_objects[label][1][0]
-        place_pose.position.y = target_objects[label][1][1]
-        place_pose.position.z = target_objects[label][1][2]
-        place_pose.orientation.x = 0
-        place_pose.orientation.y = 0
-        place_pose.orientation.z = 0
-        place_pose.orientation.w = 0
-
         yaml_dict = dict() 
         yaml_dict["test_scene_num"] = scene_num.data
-        yaml_dict["arm_name"]  = arm_name.data
         yaml_dict["object_name"] = object_name.data
+        yaml_dict["arm_name"]  = arm_name.data
         yaml_dict["pick_pose"] = message_converter.convert_ros_message_to_dictionary(pick_pose)
         yaml_dict["place_pose"] = message_converter.convert_ros_message_to_dictionary(place_pose)
 
@@ -125,12 +149,7 @@ class PickAndPlace(object):
         return target_objects
 
     def callback(self, object_list):
-        # TODO: Initialize variables
-    
-        # TODO: Rotate PR2 in place to capture side tables for the collision map
-    
-        # Read parameters
-    
+        """""" 
         # Make a dictionary of detected object to look-up
         #   key: name of the object
         # value: centroid coordinates of the object
@@ -149,22 +168,26 @@ class PickAndPlace(object):
             send_to_yaml(self.target_objects, detected_objects, self._test_scene_num) 
             self._is_initialized = True
 
-#         # Wait for 'pick_place_routine' service to come up
-#         rospy.wait_for_service('pick_place_routine')
-#     
-#         try:
-#             pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
-#             
-#             if len(self.target_objects.keys()) > 0:
-#                 label, value = self.target_objects.iteritems()[0]
-#                  
-#             # Insert your message variables to be sent as a service request
-#             resp = pick_place_routine(test_scene_num, object_name, arm_name, pick_pose, place_pose)
-#     
-#             print ("Response: ", resp.success)
-#     
-#         except rospy.ServiceException, e:
-#             print("Service call failed: %s".format(e))
+        # Wait for 'pick_place_routine' service to come up
+        rospy.wait_for_service('pick_place_routine')
+    
+        try:
+            pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+            
+            if len(self.target_objects.keys()) > 0:
+                # randomly select an object to pick
+                label = random.choice(self.target_objects.keys())
+                try:
+                    scene_num, object_name, arm_name, pick_pose, place_pose = \
+                        get_request(label, self.target_objects, detected_objects, self._test_scene_num)
+
+                    resp = pick_place_routine(scene_num, object_name, arm_name, pick_pose, place_pose)
+                    print ("Response: ", resp.success)
+                except KeyError:
+                    print("The requested object is not detected!")
+
+        except rospy.ServiceException, e:
+            print("Service call failed: %s".format(e))
  
 
 if __name__ == '__main__':
