@@ -4,18 +4,20 @@ import numpy as np
 import sklearn
 from sklearn.preprocessing import LabelEncoder
 import pickle
+
+from visualization_msgs.msg import Marker
 from sensor_stick.srv import GetNormals
 from sensor_stick.features import compute_color_histograms
 from sensor_stick.features import compute_normal_histograms
-from visualization_msgs.msg import Marker
-from sensor_stick.marker_tools import *
+from sensor_stick.marker_tools import make_label 
 from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.msg import DetectedObject
-from sensor_stick.pcl_helper import *
-
-from pr2_robot.srv import *
-
+from sensor_stick.pcl_helper import ros_to_pcl, pcl_to_ros, get_color_list, \
+                                    XYZRGB_to_XYZ, rgb_to_float 
+import pcl
 import rospy
+from sensor_msgs.msg import PointCloud2
+from sensor_msgs import point_cloud2 as pc2
 
 
 def get_normals(cloud):
@@ -107,7 +109,6 @@ def callback(pcl_msg):
     pcl_cluster_pub.publish(ros_cluster_cloud)
     
     # classification
-
     detected_objects_labels = []
     detected_objects = []
     for index, pts_list in enumerate(cluster_indices):
