@@ -78,9 +78,9 @@ rosparam command="load" file="$(find pr2_robot)/config/pick_list_3.yaml"
 ```
 roslaunch pr2_robot pick_place_project.launch
 
-./clustering.py
+<root>/pr2_robot/scripts/clustering.py
 ```
-There is noise in the processed cloud since the StatisticalOutlierRemover filter is broken in pcl-python.
+Filtering, RANSAC plane fitting and cluster segmentation are implemented in the `callback()` function. There is noise in the processed cloud since the StatisticalOutlierRemover filter is broken in pcl-python.
 
 <img src="misc/pick_list_1.png" width="250"/> <img src="misc/pick_list_2.png" width="250"/> <img src="misc/pick_list_3.png" width="250"/>
 
@@ -89,7 +89,7 @@ There is noise in the processed cloud since the StatisticalOutlierRemover filter
 ### Collision check
 
 ```
-./look_around.py
+<root>/pr2_robot/scripts/look_around.py
 ```
 Wait until it stops.
 
@@ -101,6 +101,7 @@ Keep the scripts in the previous step running, and then
 
 ```
 # The second argument (test scene number) is optional
+cd <root>/pr2_robot/scripts/
 python2 pick_and_place.py 2
 ```
 
