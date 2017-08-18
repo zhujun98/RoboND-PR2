@@ -1,4 +1,6 @@
-# 3D Perception and Pick&Place
+# PR2 3D Perception and Pick&Place
+Jun Zhu
+
 
 ## Installation
 
@@ -64,7 +66,7 @@ rosrun sensor_stick train_svm.py
 
 
 ### Load different table environments
-Changing two lines in the file `pick_place_project.launch`
+Change two entries ('test3.world' and 'pick_list_3.yaml') in the following two lines in the file `pick_place_project.launch`
 ```
 arg name="world_name" value="$(find pr2_robot)/worlds/test3.world" 
     
@@ -76,6 +78,19 @@ rosparam command="load" file="$(find pr2_robot)/config/pick_list_3.yaml"
 ```
 roslaunch pr2_robot pick_place_project.launch
 
-./run.py
+./clustering.py
 ```
-For details of the point cloud processing, see the function `pcl_callback` in `run.py`. There is noise since the StatisticalOutlierRemover filter is broken in pcl-python.
+There is noise in the processed cloud since the StatisticalOutlierRemover filter is broken in pcl-python.
+
+<img src="misc/pick_list_1.png" width="300"/> <img src="misc/pick_list_2.png" width="300"/> <img src="misc/pick_list_3.png" width="300"/>
+
+## Pick and place
+
+### Dump the pick&place requests to the YAML file
+
+Keep the scripts in the previous step running, and then 
+
+```
+# The second argument (test scene number) is optional
+python2 pick_and_place.py 2
+```
