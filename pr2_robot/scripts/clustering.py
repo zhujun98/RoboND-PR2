@@ -107,6 +107,7 @@ def callback(pcl_msg):
     pcl_objects_pub.publish(ros_cloud_objects)
     pcl_table_pub.publish(ros_cloud_table)
     pcl_cluster_pub.publish(ros_cluster_cloud)
+    collision_pub.publish(ros_cloud_table)
     
     # classification
     detected_objects_labels = []
@@ -156,6 +157,7 @@ if __name__ == '__main__':
     pcl_cluster_pub = rospy.Publisher("/pcl_cluster", PointCloud2, queue_size=1)
     object_markers_pub = rospy.Publisher("/object_markers", Marker, queue_size=1)
     detected_objects_pub = rospy.Publisher("/detected_objects", DetectedObjectsArray, queue_size=1)
+    collision_pub = rospy.Publisher("/pr2/3d_map/points", PointCloud2, queue_size=1)
 
     # Load the model stored under the directory "sensor_stick" 
     model = pickle.load(open('../../sensor_stick/scripts/model.pkl', 'rb'))
