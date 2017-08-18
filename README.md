@@ -86,7 +86,16 @@ There is noise in the processed cloud since the StatisticalOutlierRemover filter
 
 ## Pick and place
 
-### Dump the pick&place requests to the YAML file
+### Collision check
+
+```
+./look_around.py
+```
+Wait until it stops.
+
+![alt text](./misc/collision_check.png)
+
+### Execute pick and place 
 
 Keep the scripts in the previous step running, and then 
 
@@ -94,3 +103,7 @@ Keep the scripts in the previous step running, and then
 # The second argument (test scene number) is optional
 python2 pick_and_place.py 2
 ```
+
+The pick&place requests will be saved to the YAML file in this [folder](./pr2_robot/config).
+
+**Unfortunately, it cannot pick up any objects. The pick pose is not correct!**
